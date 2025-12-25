@@ -1,4 +1,5 @@
 import socket
+import ssl
 
 class URL:
     def __init__(self, url: str):
@@ -10,7 +11,7 @@ class URL:
         else:
             self.scheme = "http"
 
-        assert self.scheme == "http"
+        assert self.scheme in ["http", "https"]
 
         # url에서 호스트와 경로를 분리한다.
         if "/" not in url:
@@ -26,8 +27,17 @@ class URL:
             type=socket.SOCK_STREAM,
             proto=socket.IPPROTO_TCP,
         )
-        
-        s.connect((self.host, 80))
+
+        if self.scheme == "https":
+            ctx = ssl.create_default_context()
+            s = ctx.wrap_socket(s, server_hostname=self.host)
+
+        if self.scheme == "https":
+            self.port = 443
+        else:
+            self.port = 80
+
+        s.connect((self.host, self.port))
 
         # format => f-string의 구버전 문법
         request = "GET {} HTTP/1.1\r\n".format(self.path)
