@@ -17,13 +17,20 @@ class URL:
         if "/" not in url:
             url = url + '/'
 
+
         self.host, url = url.split("/", 1)
         self.path = "/" + url
+        
+        print(f"#### Connecting to {self.host}:...")
 
+        # 사용자 지정 포트 처리
+        if ":" in self.host:
+            self.host, port = self.host.split(":", 1)
+            self.port = int(port)
 
     def request(self):
         s = socket.socket(
-            family=socket.AF_INET,
+            family=socket.AF_INET6,  # IPv6 (localhost가 IPv6로 바인딩된 경우 대응)
             type=socket.SOCK_STREAM,
             proto=socket.IPPROTO_TCP,
         )
@@ -32,10 +39,17 @@ class URL:
             ctx = ssl.create_default_context()
             s = ctx.wrap_socket(s, server_hostname=self.host)
 
-        if self.scheme == "https":
-            self.port = 443
-        else:
-            self.port = 80
+        # 기본 포트 설정 (포트가 지정되지 않은 경우에만)
+        if not hasattr(self, 'port'):
+            if self.scheme == "https":
+                self.port = 443
+            else:
+                self.port = 80
+
+
+        print('#### Sending request...')
+        print('host:', self.host)
+        print('port:', self.port)
 
         s.connect((self.host, self.port))
 
@@ -62,6 +76,10 @@ class URL:
             header, value = line.split(":", 1)
             response_headers[header.casefold()] = value.strip()
 
+        print('#### Response headers:')
+        for header, value in response_headers.items():
+            print(f"  {header}: {value}")
+
         # 실습 프로젝트이므로 압축 인코딩을 사용하지 않는 응답만 처리한다.
         assert "content-encoding" not in response_headers
 
@@ -83,6 +101,12 @@ class URL:
                 body += chunk
 
                 response.readline()  # 청크 뒤의 \r\n 소비
+
+        # Content-Length가 명시된 응답 처리
+        elif "content-length" in response_headers:
+            length = int(response_headers["content-length"])
+            body = response.read(length)
+        
         else:
             body = response.read()
 
