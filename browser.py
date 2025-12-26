@@ -59,6 +59,8 @@ class URL:
         # format => f-string의 구버전 문법
         request = "GET {} HTTP/1.1\r\n".format(self.path)
         request += "Host: {}\r\n".format(self.host)
+        request += "User-Agent: DannyTextBrowser/0.1\r\n"
+        request += "Connection: close\r\n"  # 응답 완료 후 연결 종료
         request += "\r\n"
         s.send(request.encode("utf-8"))
 
