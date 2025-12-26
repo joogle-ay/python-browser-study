@@ -21,7 +21,8 @@ class URL:
         self.host, url = url.split("/", 1)
         self.path = "/" + url
         
-        print(f"#### Connecting to {self.host}:...")
+        print(f"-----------------------------------")
+        print(f"📌 Connecting to {self.host}:...")
 
         # 사용자 지정 포트 처리
         if ":" in self.host:
@@ -47,9 +48,11 @@ class URL:
                 self.port = 80
 
 
-        print('#### Sending request...')
-        print('host:', self.host)
-        print('port:', self.port)
+        print(f"-----------------------------------")
+        print('📌 Sending request...')
+        print(f"  host: {self.host}")
+        print(f"  path: {self.path}") 
+        print(f"  port: {self.port}")
 
         s.connect((self.host, self.port))
 
@@ -66,6 +69,12 @@ class URL:
         status_line = response.readline()
         version, status, explanation = status_line.split(" ", 2)
 
+        print('-----------------------------------')
+        print('📌 Response status line:')
+        print(f"  Version: {version}")
+        print(f"  Status: {status}")
+        print(f"  Explanation: {explanation.strip()}")
+
         # status_line 이후의 헤더들을 모두 읽어들인다.
         # response.readline()을 반복 호출하여 헤더의 끝을 나타내는 빈 줄("\r\n")이 나올 때까지 읽는다.
         # response.readline()은 호출할때마다 다음 라인으로 이동하므로, 본 반복문을 도는 시점에 상태 코드는 읽지 않는다.
@@ -76,7 +85,8 @@ class URL:
             header, value = line.split(":", 1)
             response_headers[header.casefold()] = value.strip()
 
-        print('#### Response headers:')
+        print('-----------------------------------')
+        print('📌 Response headers:')
         for header, value in response_headers.items():
             print(f"  {header}: {value}")
 
@@ -128,8 +138,9 @@ def show(body):
 
 def load(url):
     body = url.request()
-    # show(body)
-    print(body)
+    print('-----------------------------------')
+    print("📌 Response body:")
+    show(body)
 
 if __name__ == "__main__":
     import sys
