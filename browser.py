@@ -8,10 +8,26 @@ class URL:
         # 스킴이 명시되지 않은 경우 http로 간주한다.
         if "://" in url:
             self.scheme, url = url.split("://", 1)
+        elif url.startswith("data:"):
+            self.scheme = "data"
         else:
             self.scheme = "http"
 
-        assert self.scheme in ["http", "https", "file"], "지원하지 않는 스킴입니다."
+        assert self.scheme in ["http", "https", "file", "data"], "지원하지 않는 스킴입니다."
+
+        # data 스킴 처리
+        if self.scheme == 'data':
+            self.path = url
+            self.host = ''
+            self.port = None
+            return
+        
+        # file 스킴 처리
+        if self.scheme == "file":
+            self.path = url
+            self.host = ''
+            self.port = None
+            return
 
         # url에서 호스트와 경로를 분리한다.
         if "/" not in url:
@@ -32,7 +48,7 @@ class URL:
 class HttpClient:
     """HTTP 통신 담당 - 소켓 연결, 요청 전송, 응답 수신"""
 
-    USER_AGENT = "DannyTextBrowser/0.1"
+    USER_AGENT = "DannyTestBrowser/0.1"
 
     def __init__(self, url: URL):
         self.url = url
@@ -168,12 +184,16 @@ class HtmlRenderer:
         return result
 
     @staticmethod
-    def render(html: str):
+    def render(html_string: str):
+        import html
+
         """HTML을 렌더링하여 출력"""
         print('-----------------------------------')
         print("📌 Response body:")
-        text = HtmlRenderer.strip_tags(html)
-        print(text)
+        text = HtmlRenderer.strip_tags(html_string)
+        # print(text)
+        unescaped_text = html.unescape(text)
+        print(unescaped_text)
 
 class FileRenderer: 
     """파일 렌더링 담당 - 파일 내용을 출력"""
@@ -215,6 +235,13 @@ class Browser:
     def load(self, url_string: str):
         url = URL(url_string)
         
+        if url.scheme == "data":
+            print(f"-----------------------------------")
+            print(f"✅ data scheme 처리")
+            print(f"-----------------------------------")
+            print(f"    데이터: {url.path}")
+            return
+
         if url.scheme == "file":
             FileRenderer.render(url.path)
             return
@@ -226,5 +253,10 @@ class Browser:
 
 if __name__ == "__main__":
     import sys
+    from urllib.parse import unquote
+
+    # 입력된 URL 디코딩 처리
+    decoded_url = unquote(sys.argv[1])
+    
     browser = Browser()
-    browser.load(sys.argv[1])
+    browser.load(decoded_url)
