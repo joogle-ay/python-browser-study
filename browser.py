@@ -1,19 +1,36 @@
 import socket
 import ssl
 
+SUPPORTED_SCHEMES = frozenset(["http", "https", "file", "data"])
+
 class URL:
     """URL 파싱 담당 - URL 문자열을 분석하여 구성 요소로 분리"""
 
-    def __init__(self, url: str):
-        # 스킴이 명시되지 않은 경우 http로 간주한다.
-        if "://" in url:
-            self.scheme, url = url.split("://", 1)
-        elif url.startswith("data:"):
-            self.scheme = "data"
-        else:
-            self.scheme = "http"
+    is_view_source: bool = False
 
-        assert self.scheme in ["http", "https", "file", "data"], "지원하지 않는 스킴입니다."
+    def __init__(self, url: str):
+            
+        # 스킴 추출
+        if url.startswith("data:"):
+            self.scheme = "data"
+        
+        elif url.startswith("file:"):
+            self.scheme = "file"
+        
+        elif url.startswith('view-source:'):
+            self.is_view_source = True
+            sliced_url = url[len('view-source:'):]
+            self.scheme, url = sliced_url.split("://", 1)
+        
+        elif "://" in url:
+            self.scheme, url = url.split("://", 1)
+        
+        else:
+            self.scheme = None
+
+        # 지원하는 스킴인지 확인 후 예외처리
+        # - view-source는 내부 플래그로 처리하므로 제외
+        assert self.scheme in SUPPORTED_SCHEMES, "지원하지 않는 스킴입니다."
 
         # data 스킴 처리
         if self.scheme == 'data':
@@ -191,9 +208,20 @@ class HtmlRenderer:
         print('-----------------------------------')
         print("📌 Response body:")
         text = HtmlRenderer.strip_tags(html_string)
-        # print(text)
         unescaped_text = html.unescape(text)
         print(unescaped_text)
+
+class ViewSourceRenderer:
+    """뷰 소스 렌더링 담당 - 소스 코드를 출력"""
+
+    @staticmethod
+    def render(source: str):
+        import html
+
+        print('-----------------------------------')
+        print("📌 View Source:")
+        unescaped_source = html.unescape(source)
+        print(unescaped_source)
 
 class FileRenderer: 
     """파일 렌더링 담당 - 파일 내용을 출력"""
@@ -248,7 +276,11 @@ class Browser:
         
         client = HttpClient(url)
         body = client.fetch()
-        HtmlRenderer.render(body)
+
+        if url.is_view_source:
+            ViewSourceRenderer.render(body)
+        else:
+            HtmlRenderer.render(body)
 
 
 if __name__ == "__main__":
@@ -257,6 +289,5 @@ if __name__ == "__main__":
 
     # 입력된 URL 디코딩 처리
     decoded_url = unquote(sys.argv[1])
-    
     browser = Browser()
     browser.load(decoded_url)
