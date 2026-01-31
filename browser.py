@@ -121,7 +121,6 @@ class HttpClient:
             return self._read_chunked_body(response)
         # Content-Length가 명시된 응답 처리
         elif "content-length" in headers:
-            print('content-length found')
             length = int(headers["content-length"])
             return response.read(length).decode("utf-8", errors="replace")
         # 그 외의 경우 예외 처리
@@ -153,10 +152,8 @@ class HttpClient:
             self.socket = self._create_socket()
             self.socket.connect((self.url.host, self.url.port))
             self.socket.settimeout(5)  # 타임아웃 설정
-            self.response = self.socket.makefile("rb") # 소켓을 파일 객체로 래핑
-            
-            print(f"✅ response :{self.response}")
-            
+        
+                        
         # 요청 전송
         print(f"-----------------------------------")
         print('📌 Sending request...')
@@ -168,6 +165,7 @@ class HttpClient:
         request = self._build_request()
         self.socket.send(request.encode("utf-8"))
 
+        self.response = self.socket.makefile("rb")
         version, status, explanation = self._parse_status_line(self.response)
         print('-----------------------------------')
         print('📌 Response status line:')
@@ -183,6 +181,19 @@ class HttpClient:
 
         # 실습 프로젝트이므로 압축 인코딩을 사용하지 않는 응답만 처리
         assert "content-encoding" not in headers
+
+        # status code가 301, 302인 경우 redirect 처리
+        if status in ("301", "302"):
+            redirect_url = headers.get("location")
+            
+            # 상대 경로인 경우 절대 경로로 변환
+            if redirect_url.startswith('/'):
+                redirect_url = f"{self.url.scheme}://{self.url.host}{redirect_url}"
+
+            print('-----------------------------------')
+            print(f"📌 Redirecting to: {redirect_url}")
+            self.url = URL(redirect_url)
+            return self.fetch()  # 재귀 호출로 리다이렉트 처리
 
         body = self._read_body(self.response, headers)
 
@@ -223,7 +234,8 @@ class HtmlRenderer:
         print("📌 Response body:")
         text = HtmlRenderer.strip_tags(html_string)
         unescaped_text = html.unescape(text)
-        print(unescaped_text)
+        # print(unescaped_text)
+        print(' successfully rendered html content ')
 
 class ViewSourceRenderer:
     """뷰 소스 렌더링 담당 - 소스 코드를 출력"""
@@ -318,5 +330,18 @@ if __name__ == "__main__":
     browser = Browser()
 
     # browser.load(decoded_url)
-    browser.load('https://browser.engineering/examples/example1-simple.html')
-    browser.load('https://browser.engineering/index.html')
+
+    # 기본 테스트
+    # browser.load('https://browser.engineering/http.html')
+
+    # 1. view-source 테스트
+    # browser.load('view-source:https://browser.engineering/index.html')
+
+    # 2. 동일 호스트 테스트
+    # browser.load('https://browser.engineering/examples/example1-simple.html')
+    # browser.load('https://browser.engineering/index.html')
+    
+    # 3. redirect 테스트
+    # browser.load('https://browser.engineering/redirect')
+    # browser.load('https://browser.engineering/redirect2')
+    browser.load('http://browser.engineering/redirect3')
